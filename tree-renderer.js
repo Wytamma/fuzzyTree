@@ -71,7 +71,7 @@ function hexToClearValue(hex) {
 }
 
 export async function createOverlayResources(device, format, options = {}) {
-    const shaderUrl = new URL('../src/shader.wgsl', import.meta.url);
+    const shaderUrl = new URL('./shader.wgsl', import.meta.url);
     const shaderCode = await loadText(shaderUrl);
     const shaderModule = device.createShaderModule({ code: shaderCode });
     const wideLines = options.wideLines === true;

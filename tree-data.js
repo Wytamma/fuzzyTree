@@ -1,4 +1,4 @@
-export const DEFAULT_TREE_SOURCE_URL = '../data/primate-mtDNA_long.trees';
+export const DEFAULT_TREE_SOURCE_URL = './data/primate-mtDNA_long.trees';
 
 export async function loadText(url) {
     const response = await fetch(url);

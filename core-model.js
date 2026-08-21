@@ -1,4 +1,4 @@
-export const DEFAULT_TREE_SOURCE_URL = '../data/primate-mtDNA_long.trees';
+export const DEFAULT_TREE_SOURCE_URL = './data/primate-mtDNA_long.trees';
 export const DEFAULT_BATCH_SIZE = 1000;
 export const DEFAULT_STREAM_REPRESENTATIVE_WARMUP_TREES = 8;
 export const DEFAULT_STREAM_REPRESENTATIVE_BACKOFF_INTERVAL = 16;
