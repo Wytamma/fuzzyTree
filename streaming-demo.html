@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DensiTree Streaming Demo</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, sans-serif;
+            background: #0b1020;
+            color: #eef2ff;
+        }
+
+        main {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 2rem;
+        }
+
+        p {
+            margin: 0 0 16px;
+            color: #a5b4fc;
+        }
+
+        a {
+            color: #67e8f9;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin: 0 0 18px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.72);
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control label {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .control input {
+            width: 100%;
+        }
+
+        .control output {
+            font-size: 0.85rem;
+            color: #67e8f9;
+        }
+
+        .source-control {
+            grid-column: 1 / -1;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-row input {
+            flex: 1;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        button {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        button:hover {
+            background: rgba(51, 65, 85, 0.95);
+        }
+
+        .status {
+            margin-top: 16px;
+            color: #67e8f9;
+        }
+
+        .meta {
+            margin-top: 8px;
+            color: #93c5fd;
+            font-size: 0.9rem;
+        }
+
+        canvas {
+            display: block;
+            width: min(100%, 960px);
+            height: 640px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            background: #050816;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+    </style>
+    <script type="module" src="streaming-demo.js"></script>
+</head>
+<body>
+    <main>
+        <h1>DensiTree Streaming Demo</h1>
+        <p>Simulates posterior trees arriving over time in batches of 1–100. This is intended as a BEAST/Beastiary-style streaming demo.</p>
+        <p><a href="index.html">Back to main demo</a></p>
+
+        <section class="controls">
+            <div class="control source-control">
+                <label for="tree-source-url">Tree source</label>
+                <div class="control-row">
+                    <input id="tree-source-url" type="text" value="https://raw.githubusercontent.com/taming-the-beast/Introduction-to-BEAST2/master/precooked_runs/primate-mtDNA_long.trees">
+                    <button id="prepare-source" type="button">Prepare stream</button>
+                </div>
+            </div>
+            <div class="control">
+                <label for="trees-per-tick">Trees per tick</label>
+                <input id="trees-per-tick" type="range" min="1" max="100" value="25" step="1">
+                <output id="trees-per-tick-value">25</output>
+            </div>
+            <div class="control">
+                <label for="tick-interval">Tick interval (ms)</label>
+                <input id="tick-interval" type="range" min="50" max="2000" value="250" step="50">
+                <output id="tick-interval-value">250 ms</output>
+            </div>
+            <div class="control">
+                <label for="stream-warmup">Representative warmup</label>
+                <input id="stream-warmup" type="range" min="0" max="50" value="8" step="1">
+                <output id="stream-warmup-value">8</output>
+            </div>
+            <div class="control">
+                <label for="stream-interval">Representative backoff</label>
+                <input id="stream-interval" type="range" min="0" max="100" value="16" step="1">
+                <output id="stream-interval-value">16</output>
+            </div>
+            <div class="control">
+                <label for="burnin">Burn-in</label>
+                <input id="burnin" type="range" min="0" max="90" value="10" step="1">
+                <output id="burnin-value">10%</output>
+            </div>
+            <div class="control">
+                <label for="tree-limit">Visible trees</label>
+                <input id="tree-limit" type="range" min="1" max="1000" value="1000" step="1">
+                <output id="tree-limit-value">1000</output>
+            </div>
+            <div class="control">
+                <label for="visible-tree-mode">Visible tree selection</label>
+                <select id="visible-tree-mode">
+                    <option value="even" selected>Evenly spaced</option>
+                    <option value="first">First N</option>
+                    <option value="last">Last N</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="show-ordering-topology">Ordering topology overlay</label>
+                <input id="show-ordering-topology" type="checkbox" checked>
+            </div>
+            <div class="control actions">
+                <button id="start-stream" type="button">Start</button>
+                <button id="pause-stream" type="button">Pause</button>
+                <button id="step-stream" type="button">Step</button>
+                <button id="reset-stream" type="button">Reset</button>
+                <button id="reset-view" type="button">Reset view</button>
+                <button id="rehome-view" type="button">Rehome</button>
+            </div>
+        </section>
+
+        <canvas id="canvas"></canvas>
+        <p id="status" class="status"></p>
+        <p id="stream-meta" class="meta"></p>
+    </main>
+</body>
+</html>

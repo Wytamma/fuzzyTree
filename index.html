@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DensiTree Visualization</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --canvas-background: #050816;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, sans-serif;
+            background: #0b1020;
+            color: #eef2ff;
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 16px;
+            font-size: 2rem;
+        }
+
+        p {
+            margin: 0 0 16px;
+            color: #a5b4fc;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin: 0 0 18px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.72);
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control label {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .control input {
+            width: 100%;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-row input {
+            flex: 1;
+        }
+
+        .control-row button {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font: inherit;
+            white-space: nowrap;
+        }
+
+        .source-control {
+            grid-column: 1 / -1;
+        }
+
+        .control output {
+            font-size: 0.85rem;
+            color: #67e8f9;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .actions button {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(30, 41, 59, 0.9);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .actions button:hover {
+            background: rgba(51, 65, 85, 0.95);
+        }
+
+        .hint {
+            margin: 0 0 14px;
+            font-size: 0.9rem;
+            color: #93c5fd;
+        }
+
+        .status {
+            margin-top: 16px;
+            color: #67e8f9;
+        }
+
+        .loading-panel {
+            margin: 14px 0 10px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .loading-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 10px;
+            appearance: none;
+        }
+
+        .loading-meta {
+            margin-top: 8px;
+            color: #93c5fd;
+            font-size: 0.85rem;
+        }
+
+        .debug {
+            margin-top: 12px;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+        }
+
+        canvas {
+            display: block;
+            width: min(100%, 960px);
+            height: 640px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            background: var(--canvas-background);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+    </style>
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <main>
+        <h1>DensiTree Visualization</h1>
+        <p>WebGPU overlay using the project shader and tree data parsed in Zig/WASM.</p>
+        <p><a href="streaming-demo.html">Open streaming simulation demo</a></p>
+        <section class="controls" id="controls">
+            <div class="control source-control">
+                <label for="tree-source-url">Tree source</label>
+                <div class="control-row">
+                    <input id="tree-source-url" type="text" value="./data/primate-mtDNA_long.trees">
+                    <button id="load-source" type="button">Load source</button>
+                </div>
+            </div>
+            <div class="control">
+                <label for="burnin">Burn-in</label>
+                <input id="burnin" type="range" min="0" max="90" value="10" step="1">
+                <output id="burnin-value">10%</output>
+            </div>
+            <div class="control">
+                <label for="tree-limit">Visible trees</label>
+                <input id="tree-limit" type="range" min="1" max="1000" value="1000" step="1">
+                <output id="tree-limit-value">1000</output>
+            </div>
+            <div class="control">
+                <label for="visible-tree-mode">Visible tree selection</label>
+                <select id="visible-tree-mode">
+                    <option value="even" selected>Evenly spaced</option>
+                    <option value="first">First N</option>
+                    <option value="last">Last N</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="tree-colour">Tree colour</label>
+                <input id="tree-colour" type="color" value="#59d8ff">
+                <output id="tree-colour-value">#59d8ff</output>
+            </div>
+            <div class="control">
+                <label for="background-colour">Background colour</label>
+                <input id="background-colour" type="color" value="#050816">
+                <output id="background-colour-value">#050816</output>
+            </div>
+            <div class="control">
+                <label for="tree-alpha">Alpha</label>
+                <input id="tree-alpha" type="range" min="0.01" max="0.5" value="0.08" step="0.01">
+                <output id="tree-alpha-value">0.08</output>
+            </div>
+            <div class="control">
+                <label for="topology-mode">Ordering mode</label>
+                <select id="topology-mode">
+                    <option value="full" selected>Full topology pass</option>
+                    <option value="fast">Fast mode</option>
+                    <option value="sampled">Sampled mode</option>
+                    <option value="background-refine">Background refine</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="topology-sample-count">Topology sample trees</label>
+                <input id="topology-sample-count" type="number" min="1" max="100000" value="1000" step="1">
+                <output id="topology-sample-count-value">1000</output>
+            </div>
+            <div class="control">
+                <label for="show-ordering-topology">Ordering topology overlay</label>
+                <input id="show-ordering-topology" type="checkbox">
+            </div>
+            <div class="control">
+                <label for="ordering-topology-colour">Overlay colour</label>
+                <input id="ordering-topology-colour" type="color" value="#ffd166">
+                <output id="ordering-topology-colour-value">#ffd166</output>
+            </div>
+            <div class="control">
+                <label for="ordering-topology-alpha">Overlay alpha</label>
+                <input id="ordering-topology-alpha" type="range" min="0.05" max="1" value="0.9" step="0.01">
+                <output id="ordering-topology-alpha-value">0.90</output>
+            </div>
+            <div class="control">
+                <label for="ordering-topology-thickness">Overlay thickness</label>
+                <input id="ordering-topology-thickness" type="range" min="1" max="12" value="4" step="1">
+                <output id="ordering-topology-thickness-value">4</output>
+            </div>
+            <div class="control actions">
+                <button id="reset-view" type="button">Reset view</button>
+                <button id="rehome-view" type="button">Rehome</button>
+            </div>
+        </section>
+        <section class="loading-panel" aria-live="polite">
+            <div class="loading-header">
+                <span id="loading-stage">Idle</span>
+                <span id="loading-percent">0%</span>
+            </div>
+            <progress id="loading-progress" class="loading-bar" max="1" value="0"></progress>
+            <div id="loading-meta" class="loading-meta">No active load.</div>
+        </section>
+        <p class="hint">Mouse wheel zooms. Hold Option and wheel to expand X, hold Shift and wheel to expand Y. Drag to pan. Double-click to zoom in.</p>
+        <canvas id="canvas"></canvas>
+        <p class="status" id="status"></p>
+        <pre class="debug" id="debug"></pre>
+    </main>
+</body>
+</html>
